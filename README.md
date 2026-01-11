@@ -1,14 +1,14 @@
-# A fork of the [original dwm_lut](https://github.com/ledoge/dwm_lut) which works also on **Windows 11**
-## [Download latest pre-release (supports Windows 24H2 now)](https://github.com/lauralex/dwm_lut/releases/download/v4.0.2/Release24h2.zip)
-If you encounter problems with the 4.0.2 version, download the [3.9.6](https://github.com/lauralex/dwm_lut/releases/download/v3.9.6/Release.zip) version.
+# A fork of the [laurex dwm_lut](https://github.com/lauralex/dwm_lut)
+## [Download latest release](https://github.com/hadoooooouken/dwm_lut_fps_boost/releases/download/1.0.0/dwm_lut_fps_boost.zip)
+
+https://github.com/hadoooooouken/dwm_lut_fps_boost/releases/download/1.0.0/dwm_lut_fps_boost.zip
 
 ## Dependencies
 - Visual C++ runtime (https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)
+- CPU with AVX2 support
 
 # About
-This tool applies 3D LUTs to the Windows desktop by hooking into DWM. It works in both SDR and HDR modes, and uses tetrahedral interpolation on the LUT data. In SDR, blue-noise dithering is applied to the output to reduce banding.
-
-Right now it should work on any 20H2 or 21H1 build of Windows 10, and also the current build of Windows 11, and I'll try to update it whenever a new version breaks it.
+Tested only with Windows 10 in SDR mode
 
 # Usage
 Use DisplayCAL or similar to generate .cube LUT files of any size, run `DwmLutGUI.exe`, assign them to monitors and then click Apply. Note that LUTs cannot be applied to monitors that are in "Duplicate" mode.
