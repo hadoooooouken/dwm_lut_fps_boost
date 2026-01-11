@@ -1,4 +1,7 @@
 // pch.cpp: source file corresponding to the pre-compiled header
+#ifndef _DLL
+#define _DLL
+#endif
 
 #include "pch.h"
 
