@@ -2,7 +2,11 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "dwm-lut",
   "version": "3.9.1-hotfix",
+  "builtin-baseline": "25b458671af03578e6a34edd8f0d1ac85e084df4",
   "dependencies": [
-    "minhook"
+    {
+      "name": "detours",
+      "version>=": "4.0.1#8"
+    }
   ]
 }
