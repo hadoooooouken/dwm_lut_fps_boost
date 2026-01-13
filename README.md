@@ -1,7 +1,5 @@
 # A fork of the [laurex dwm_lut](https://github.com/lauralex/dwm_lut)
-## [Download latest release](https://github.com/hadoooooouken/dwm_lut_fps_boost/releases/download/1.0.0/dwm_lut_fps_boost.zip)
-
-https://github.com/hadoooooouken/dwm_lut_fps_boost/releases/download/1.0.0/dwm_lut_fps_boost.zip
+## [Download latest release](https://github.com/hadoooooouken/dwm_lut_fps_boost/releases/download/1.0.1/dwm_lut_fps_boost_1.0.1.zip)
 
 ## Dependencies
 - Visual C++ runtime (https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)
