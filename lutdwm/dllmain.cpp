@@ -35,22 +35,15 @@
 #define _STRINGIFY(x) #x
 #define STRINGIFY(x) _STRINGIFY(x)
 
-// AVX2 optimized float to half conversion batch
-__forceinline void FloatToHalfBatch_AVX2(const float* src, uint16_t* dst, size_t count) {
+// SSE optimized float to half conversion batch
+__forceinline void FloatToHalfBatch_SSE(const float* src, uint16_t* dst, size_t count) {
     size_t i = 0;
 
-    // Process 8 floats at a time with AVX2
-    for (; i + 7 < count; i += 8) {
-        __m256 vf = _mm256_loadu_ps(src + i);
-        __m128i vh = _mm256_cvtps_ph(vf, _MM_FROUND_TO_NEAREST_INT);
-        _mm_storeu_si128((__m128i*)(dst + i), vh);
-    }
-
-    // Process 4 floats at a time
+    // Process 4 floats at a time with SSE
     for (; i + 3 < count; i += 4) {
         __m128 vf = _mm_loadu_ps(src + i);
         __m128i vh = _mm_cvtps_ph(vf, _MM_FROUND_TO_NEAREST_INT);
-        _mm_storel_epi64((__m128i*)(dst + i), vh);
+        _mm_storel_epi64((__m128i*)(dst + i), vh); // Store lower 64 bits (4 half values)
     }
 
     // Process remaining 0-3 elements
@@ -61,20 +54,22 @@ __forceinline void FloatToHalfBatch_AVX2(const float* src, uint16_t* dst, size_t
     }
 }
 
-// AVX2 optimized noise texture conversion with aligned loads
-__forceinline void ConvertNoiseBytesToFloat_AVX2(float* output) {
+
+// SSE optimized noise texture conversion with aligned loads
+__forceinline void ConvertNoiseBytesToFloat_SSE(float* output) {
     const uint8_t* src = GetNoiseDataPtr();
     const size_t total = static_cast<size_t>(NOISE_SIZE) * static_cast<size_t>(NOISE_SIZE);
     
     size_t i = 0;
     
-    // Process 32 bytes at a time (8 sets of 4 bytes) with AVX2 aligned loads
-    for (; i + 31 < total; i += 32) {
-        __m256i bytes = _mm256_load_si256((const __m256i*)(src + i));
+    // Process 16 bytes at a time (4 sets of 4 bytes) with SSE aligned loads
+    for (; i + 15 < total; i += 16) {
+        __m128i bytes = _mm_load_si128((const __m128i*)(src + i));
         
-        // Split into 8 sets of 4 bytes and process
-        for (size_t j = 0; j < 8; j++) {
+        // Process each set of 4 bytes separately
+        for (size_t j = 0; j < 4; j++) {
             size_t byte_idx = i + j * 4;
+            // Load 4 bytes as 32-bit integer and expand to 4 floats
             __m128i byte_vec_32 = _mm_cvtsi32_si128(*(const int*)(src + byte_idx));
             
             __m128i expanded = _mm_cvtepu8_epi32(byte_vec_32);
@@ -87,7 +82,7 @@ __forceinline void ConvertNoiseBytesToFloat_AVX2(float* output) {
         }
     }
     
-    // Process remaining bytes (up to 31)
+    // Process remaining bytes (up to 15)
     for (; i + 3 < total; i += 4) {
         __m128i byte_vec = _mm_cvtsi32_si128(*(const int*)(src + i));
         byte_vec = _mm_unpacklo_epi8(byte_vec, _mm_setzero_si128());
@@ -649,7 +644,7 @@ void InitializeStuff(IDXGISwapChain* swapChain)
             continue;
         }
 
-        FloatToHalfBatch_AVX2(lut.rawLut, halfData, elementCount);
+        FloatToHalfBatch_SSE(lut.rawLut, halfData, elementCount);
 
         D3D11_TEXTURE3D_DESC desc = {};
         desc.Width = lut.size;
@@ -712,7 +707,7 @@ void InitializeStuff(IDXGISwapChain* swapChain)
             return;
         }
 
-        ConvertNoiseBytesToFloat_AVX2(noise);
+        ConvertNoiseBytesToFloat_SSE(noise);
 
         D3D11_SUBRESOURCE_DATA initData;
         initData.pSysMem = noise;

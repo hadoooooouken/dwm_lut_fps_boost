@@ -3,7 +3,6 @@
 
 ## Dependencies
 - Visual C++ runtime (https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)
-- CPU with AVX2 support
 
 # About
 Tested only with Windows 10 in SDR mode
