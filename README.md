@@ -19,6 +19,14 @@ Minimizing the GUI will make it disappear from the taskbar, and you can use the 
 
 Note: DirectFlip and MPO get force disabled on monitors with an active LUT. These features are designed to improve performance for some windowed applications by allowing them to bypass DWM (and therefore also the LUT). This ensures that LUTs get applied properly to all applications (except exclusive fullscreen ones).
 
+# How to generate a profile without a calibrator?
+Download and unpack DisplayCAL ZIP version - https://displaycal.net/#download
+
+https://displaycal.net/download/standalone/DisplayCAL-win32.zip
+
+![displaycal_generate_cube](displaycal/displaycal_generate_cube.png)
+
+
 # Compiling
 Install [vcpkg](https://vcpkg.io/en/getting-started.html) for C++ dependency management:
 
