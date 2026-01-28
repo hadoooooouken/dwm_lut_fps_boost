@@ -1,8 +1,17 @@
 # A fork of the [laurex dwm_lut](https://github.com/lauralex/dwm_lut)
-## [Download latest release](https://github.com/hadoooooouken/dwm_lut_fps_boost/releases/download/1.0.1/dwm_lut_fps_boost_1.0.1.zip)
+## [Download latest release](https://github.com/hadoooooouken/dwm_lut_fps_boost/releases/download/1.0.2/dwm_lut_fps_boost_1.0.2.zip)
 
 ## Dependencies
 - Visual C++ runtime (https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)
+
+# Comparison
+
+| Cyberpunk 2077 | No dwm_lut | Old dwm_lut | Optimized dwm_lut | Boost |
+| :--- | :---: | :---: | :---: | :---: |
+| **Average fps** | 90 | 78 | 87 | **+11.5%** |
+| **Min fps** | 77 | 68 | 75 | **+10.3%** |
+| **Max fps** | 104 | 89 | 100 | **+12.4%** |
+| **Frames** | 5832 | 5046 | 5590 | **+10.8%** |
 
 # About
 Tested only with Windows 10 in SDR mode
