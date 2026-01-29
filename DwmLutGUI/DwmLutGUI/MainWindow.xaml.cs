@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -180,21 +180,6 @@ namespace DwmLutGUI
             _viewModel.SdrLutPath = "None";
         }
 
-        private void HdrLutBrowse_Click(object sender, RoutedEventArgs e)
-        {
-            var folder = Path.GetDirectoryName(_viewModel.HdrLutPath);
-            var lutPath = BrowseLuts(folder);
-            if (!string.IsNullOrEmpty(lutPath))
-            {
-                _viewModel.HdrLutPath = lutPath;
-            }
-        }
-
-        private void HdrLutClear_Click(object sender, RoutedEventArgs e)
-        {
-            _viewModel.HdrLutPath = "None";
-        }
-
         private void Disable_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -265,10 +250,6 @@ namespace DwmLutGUI
                 _viewModel.SdrLutPath =
                     monitor.SdrLuts[(monitor.SdrLuts.IndexOf(monitor.SdrLutPath) + 1) % monitor.SdrLuts.Count];
             }
-            else
-            {
-                _viewModel.HdrLutPath = monitor.HdrLuts[(monitor.HdrLuts.IndexOf(monitor.HdrLutPath) + 1) % monitor.HdrLuts.Count];
-            }
 
             if (_viewModel.IsActive)
             {
@@ -277,12 +258,5 @@ namespace DwmLutGUI
             }
         }
 
-        private void RemoveHdrLut_Click(object sender, RoutedEventArgs e)
-        {
-            var monitor = _viewModel.SelectedMonitor;
-            if (monitor == null) return;
-            monitor.HdrLuts.Remove(monitor.HdrLutPath);
-            monitor.HdrLutPath = monitor.HdrLuts.FirstOrDefault() ?? "None";
-        }
     }
 }

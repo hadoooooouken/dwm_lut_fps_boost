@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -168,12 +168,6 @@ namespace DwmLutGUI
                 {
                     var dest = LutsPath + monitor.Position.Replace(',', '_') + ".cube";
                     CopyOrConvertLut(monitor.SdrLutPath, dest);
-                }
-
-                if (string.IsNullOrEmpty(monitor.HdrLutPath)) continue;
-                {
-                    var dest = LutsPath + monitor.Position.Replace(',', '_') + "_hdr.cube";
-                    CopyOrConvertLut(monitor.HdrLutPath, dest);
                 }
             }
 

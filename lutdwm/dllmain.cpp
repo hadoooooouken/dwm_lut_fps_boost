@@ -26,7 +26,7 @@
 
 #pragma intrinsic(_ReturnAddress)
 
-#define DITHER_GAMMA 2.2f
+// #define DITHER_GAMMA 2.2f - using FastPow22 instead
 #define LUT_FOLDER "%SYSTEMROOT%\\Temp\\luts"
 #define MAX_LUTS 32
 #define MAX_LUT_TARGETS 64
@@ -43,7 +43,7 @@ __forceinline void FloatToHalfBatch_SSE(const float* src, uint16_t* dst, size_t 
     for (; i + 3 < count; i += 4) {
         __m128 vf = _mm_loadu_ps(src + i);
         __m128i vh = _mm_cvtps_ph(vf, _MM_FROUND_TO_NEAREST_INT);
-        _mm_storel_epi64((__m128i*)(dst + i), vh); // Store lower 64 bits (4 half values)
+        _mm_storel_epi64((__m128i*)(dst + i), vh);
     }
 
     // Process remaining 0-3 elements
@@ -53,7 +53,6 @@ __forceinline void FloatToHalfBatch_SSE(const float* src, uint16_t* dst, size_t 
         dst[i] = (uint16_t)_mm_cvtsi128_si32(vh);
     }
 }
-
 
 // SSE optimized noise texture conversion with aligned loads
 __forceinline void ConvertNoiseBytesToFloat_SSE(float* output) {
@@ -69,7 +68,6 @@ __forceinline void ConvertNoiseBytesToFloat_SSE(float* output) {
         // Process each set of 4 bytes separately
         for (size_t j = 0; j < 4; j++) {
             size_t byte_idx = i + j * 4;
-            // Load 4 bytes as 32-bit integer and expand to 4 floats
             __m128i byte_vec_32 = _mm_cvtsi32_si128(*(const int*)(src + byte_idx));
             
             __m128i expanded = _mm_cvtepu8_epi32(byte_vec_32);
@@ -132,27 +130,6 @@ const int COverlayContext_DeviceClipBox_offset = -0x120;
 
 const int IOverlaySwapChain_HardwareProtected_offset = -0xbc;
 
-const unsigned char COverlayContext_Present_bytes_w11[] = {
-    0x40, 0x53, 0x55, 0x56, 0x57, 0x41, 0x56, 0x41, 0x57, 0x48, 0x81, 0xec, 0x88, 0x00, 0x00, 0x00, 0x48, 0x8b, 0x05,
-    '?', '?', '?', '?', 0x48, 0x33, 0xc4, 0x48, 0x89, 0x44, 0x24, 0x78, 0x48
-};
-const int IOverlaySwapChain_IDXGISwapChain_offset_w11 = 0xE0;
-
-const unsigned char COverlayContext_IsCandidateDirectFlipCompatbile_bytes_w11[] = {
-    0x40, 0x55, 0x53, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8b, 0xec, 0x48, 0x83, 0xec,
-    0x68, 0x48,
-};
-
-const unsigned char COverlayContext_OverlaysEnabled_bytes_w11[] = {
-    0x83, 0x3D, '?', '?', '?', '?', '?', 0x75, 0x04
-};
-
-int COverlayContext_DeviceClipBox_offset_w11 = 0x466C;
-
-const int IOverlaySwapChain_HardwareProtected_offset_w11 = -0x144;
-
-bool isWindows11;
-
 bool aob_match_inverse(const void* buf1, const void* mask, size_t buf_len)
 {
     for (size_t i = 0; i < buf_len; ++i)
@@ -186,24 +163,6 @@ SamplerState noiseSmp : register(s1);
 int lutSize : register(b0);
 bool hdr : register(b1);
 
-static float3x3 scrgb_to_bt2100 = {
-2939026994.L / 585553224375.L, 9255011753.L / 3513319346250.L,   173911579.L / 501902763750.L,
-  76515593.L / 138420033750.L, 6109575001.L / 830520202500.L,    75493061.L / 830520202500.L,
-  12225392.L / 93230009375.L, 1772384008.L / 2517210253125.L, 18035212433.L / 2517210253125.L,
-};
-
-static float3x3 bt2100_to_scrgb = {
- 348196442125.L / 1677558947.L, -123225331250.L / 1677558947.L,  -15276242500.L / 1677558947.L,
--579752563250.L / 37238079773.L, 5273377093000.L / 37238079773.L,  -38864558125.L / 37238079773.L,
- -12183628000.L / 5369968309.L, -472592308000.L / 37589778163.L, 5256599974375.L / 37589778163.L,
-};
-
-static float m1 = 1305 / 8192.;
-static float m2 = 2523 / 32.;
-static float c1 = 107 / 128.;
-static float c2 = 2413 / 128.;
-static float c3 = 2392 / 128.;
-
 // Use hardware trilinear filtering
 float3 SampleLut(float3 index) {
     float3 tex = (index + 0.5) / lutSize;
@@ -215,21 +174,17 @@ float3 LutTransform(float3 rgb) {
     return SampleLut(lutIndex);
 }
 
-float3 pq_eotf(float3 e) {
-    return pow(max((pow(e, 1 / m2) - c1), 0) / (c2 - c3 * pow(e, 1 / m2)), 1 / m1);
-}
-
-float3 pq_inv_eotf(float3 y) {
-    return pow((c1 + c2 * pow(y, m1)) / (1 + c3 * pow(y, m1)), m2);
+float3 FastPow22(float3 x) {
+    return x * (x * (x * 0.305306011 + 0.682171111) + 0.012522878);
 }
 
 float3 OrderedDither(float3 rgb, float2 pos) {
     float3 low = floor(rgb * 255) / 255;
     float3 high = low + 1.0 / 255;
 
-    float3 rgb_linear = pow(rgb,)" STRINGIFY(DITHER_GAMMA) R"();
-    float3 low_linear = pow(low,)" STRINGIFY(DITHER_GAMMA) R"();
-    float3 high_linear = pow(high,)" STRINGIFY(DITHER_GAMMA) R"();
+    float3 rgb_linear = FastPow22(rgb);
+    float3 low_linear = FastPow22(low);
+    float3 high_linear = FastPow22(high);
 
     float noise = noiseTex.Sample(noiseSmp, pos / )" STRINGIFY(NOISE_SIZE) R"().x;
     float3 threshold = lerp(low_linear, high_linear, noise);
@@ -246,23 +201,9 @@ VS_OUTPUT VS(VS_INPUT input) {
 
 float4 PS(VS_OUTPUT input) : SV_TARGET{
     float3 sample = backBufferTex.Sample(smp, input.tex).rgb;
-
-    if (hdr) {
-        float3 hdr10_sample = pq_inv_eotf(saturate(mul(scrgb_to_bt2100, sample)));
-
-        float3 hdr10_res = LutTransform(hdr10_sample);
-
-        float3 scrgb_res = mul(bt2100_to_scrgb, pq_eotf(hdr10_res));
-
-        return float4(scrgb_res, 1);
-    }
-    else {
-        float3 res = LutTransform(sample);
-
-        res = OrderedDither(res, input.pos.xy);
-
-        return float4(res, 1);
-    }
+    float3 res = LutTransform(sample);
+    res = OrderedDither(res, input.pos.xy);
+    return float4(res, 1);
 }
 )";
 
@@ -295,11 +236,10 @@ struct lutData
     int left;
     int top;
     int size;
-    bool isHdr;
     ID3D11ShaderResourceView* textureView;
     float* rawLut;
 
-    lutData() : left(0), top(0), size(0), isHdr(false), textureView(nullptr), rawLut(nullptr) {}
+    lutData() : left(0), top(0), size(0), textureView(nullptr), rawLut(nullptr) {}
 };
 
 void DrawRectangle(struct tagRECT* rect, int index)
@@ -454,7 +394,6 @@ bool AddLUTs(char* folder)
             
             if (sscanf_s(findData.cFileName, "%d_%d", &lut->left, &lut->top) == 2)
             {
-                lut->isHdr = strstr(fileName, "hdr") != NULL;
                 lut->textureView = NULL;
                 if (!ParseLUT(lut, filePath))
                 {
@@ -491,47 +430,21 @@ void UnsetLUTActive(void* target)
     }
 }
 
-lutData* GetLUTDataFromCOverlayContext(void* context, bool hdr)
+lutData* GetLUTDataFromCOverlayContext(void* context)
 {
     int left, top;
-    if (isWindows11)
-    {
-        float* rect = (float*)((unsigned char*)*(void**)context + COverlayContext_DeviceClipBox_offset_w11);
-        left = (int)rect[0];
-        top = (int)rect[1];
-    }
-    else
-    {
-        int* rect = (int*)((unsigned char*)context + COverlayContext_DeviceClipBox_offset);
-        left = rect[0];
-        top = rect[1];
-    }
+    int* rect = (int*)((unsigned char*)context + COverlayContext_DeviceClipBox_offset);
+    left = rect[0];
+    top = rect[1];
 
     for (auto& lut : luts)
     {
-        if (lut.left == left && lut.top == top && lut.isHdr == hdr)
+        if (lut.left == left && lut.top == top)
         {
             return &lut;
         }
     }
     return NULL;
-}
-
-bool DetectWindows11()
-{
-    OSVERSIONINFOEXW osvi = { sizeof(osvi), 0, 0, 0, 0, {0}, 0, 0 };
-    DWORDLONG const dwlConditionMask = VerSetConditionMask(
-        VerSetConditionMask(
-            VerSetConditionMask(
-                0, VER_MAJORVERSION, VER_GREATER_EQUAL),
-            VER_MINORVERSION, VER_GREATER_EQUAL),
-        VER_BUILDNUMBER, VER_GREATER_EQUAL);
-    
-    osvi.dwMajorVersion = 10;
-    osvi.dwMinorVersion = 0;
-    osvi.dwBuildNumber = 22000;
-    
-    return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION | VER_BUILDNUMBER, dwlConditionMask) != FALSE;
 }
 
 void InitializeStuff(IDXGISwapChain* swapChain)
@@ -807,13 +720,14 @@ bool ApplyLUT(void* cOverlayContext, IDXGISwapChain* swapChain, struct tagRECT* 
     {
         index = 0;
     }
-    else if (newBackBufferDesc.Format == DXGI_FORMAT_R16G16B16A16_FLOAT)
+    else
     {
-        index = 1;
+        backBuffer->Release();
+        return false;
     }
 
-    lutData* lut = nullptr;
-    if (index == -1 || !(lut = GetLUTDataFromCOverlayContext(cOverlayContext, index == 1)))
+    lutData* lut = GetLUTDataFromCOverlayContext(cOverlayContext);
+    if (index == -1 || lut == nullptr)
     {
         backBuffer->Release();
         return false;
@@ -890,7 +804,7 @@ bool ApplyLUT(void* cOverlayContext, IDXGISwapChain* swapChain, struct tagRECT* 
     deviceContext->PSSetShaderResources(2, 1, &noiseTextureView);
     deviceContext->PSSetSamplers(1, 1, &noiseSamplerState);
 
-    int constantData[4] = { lut->size, (index == 1) ? 1 : 0, 0, 0 };
+    int constantData[4] = { lut->size, 0, 0, 0 }; // hdr = false
     UpdateConstantBuffer_SSE(deviceContext, constantBuffer, constantData);
     deviceContext->PSSetConstantBuffers(0, 1, &constantBuffer);
 
@@ -932,27 +846,15 @@ long COverlayContext_Present_hook(void* self, void* overlaySwapChain, unsigned i
 {
     if (_ReturnAddress() < (void*)COverlayContext_Present_real_orig)
     {
-        if (isWindows11 && *((bool*)overlaySwapChain + IOverlaySwapChain_HardwareProtected_offset_w11) ||
-            !isWindows11 && *((bool*)overlaySwapChain + IOverlaySwapChain_HardwareProtected_offset))
+        if (*((bool*)overlaySwapChain + IOverlaySwapChain_HardwareProtected_offset))
         {
             UnsetLUTActive(self);
         }
         else
         {
             IDXGISwapChain* swapChain = nullptr;
-            if (isWindows11)
-            {
-                int sub_from_legacy_swapchain = *(int*)((unsigned char*)overlaySwapChain - 4);
-                void* real_overlay_swap_chain = (unsigned char*)overlaySwapChain - sub_from_legacy_swapchain -
-                    0x1b0;
-                swapChain = *(IDXGISwapChain**)((unsigned char*)real_overlay_swap_chain +
-                    IOverlaySwapChain_IDXGISwapChain_offset_w11);
-            }
-            else
-            {
-                swapChain = *(IDXGISwapChain**)((unsigned char*)overlaySwapChain +
-                    IOverlaySwapChain_IDXGISwapChain_offset);
-            }
+            swapChain = *(IDXGISwapChain**)((unsigned char*)overlaySwapChain +
+                IOverlaySwapChain_IDXGISwapChain_offset);
 
             if (swapChain && ApplyLUT(self, swapChain, rectVec->start, (int)(rectVec->end - rectVec->start)))
             {
@@ -1014,77 +916,38 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
             return FALSE;
         }
 
-        isWindows11 = DetectWindows11();
-
         size_t imageSize = static_cast<size_t>(moduleInfo.SizeOfImage);
 
-        if (isWindows11)
+        for (size_t i = 0; i <= imageSize - sizeof(COverlayContext_Present_bytes); i++)
         {
-            for (size_t i = 0; i <= imageSize - sizeof(COverlayContext_Present_bytes_w11); i++)
+            unsigned char* address = (unsigned char*)dwmcore + i;
+            if (!COverlayContext_Present_orig && !memcmp(address, COverlayContext_Present_bytes,
+                sizeof(COverlayContext_Present_bytes)))
             {
-                unsigned char* address = (unsigned char*)dwmcore + i;
-                if (!COverlayContext_Present_orig && sizeof(COverlayContext_Present_bytes_w11) <= imageSize - i && 
-                    !aob_match_inverse(address, COverlayContext_Present_bytes_w11,
-                        sizeof(COverlayContext_Present_bytes_w11)))
-                {
-                    COverlayContext_Present_orig = (COverlayContext_Present_t*)address;
-                    COverlayContext_Present_real_orig = COverlayContext_Present_orig;
-                }
-                else if (!COverlayContext_IsCandidateDirectFlipCompatbile_orig && 
-                    sizeof(COverlayContext_IsCandidateDirectFlipCompatbile_bytes_w11) <= imageSize - i && 
-                    !aob_match_inverse(address, COverlayContext_IsCandidateDirectFlipCompatbile_bytes_w11,
-                        sizeof(COverlayContext_IsCandidateDirectFlipCompatbile_bytes_w11)))
+                COverlayContext_Present_orig = (COverlayContext_Present_t*)address;
+                COverlayContext_Present_real_orig = COverlayContext_Present_orig;
+            }
+            else if (!COverlayContext_IsCandidateDirectFlipCompatbile_orig && !memcmp(
+                address, COverlayContext_IsCandidateDirectFlipCompatbile_bytes,
+                sizeof(COverlayContext_IsCandidateDirectFlipCompatbile_bytes)))
+            {
+                static int found = 0;
+                found++;
+                if (found == 2)
                 {
                     COverlayContext_IsCandidateDirectFlipCompatbile_orig = (
-                        COverlayContext_IsCandidateDirectFlipCompatbile_t*)address;
-                }
-                else if (!COverlayContext_OverlaysEnabled_orig && 
-                    sizeof(COverlayContext_OverlaysEnabled_bytes_w11) <= imageSize - i && 
-                    !aob_match_inverse(address, COverlayContext_OverlaysEnabled_bytes_w11,
-                        sizeof(COverlayContext_OverlaysEnabled_bytes_w11)))
-                {
-                    COverlayContext_OverlaysEnabled_orig = (COverlayContext_OverlaysEnabled_t*)address;
-                }
-                if (COverlayContext_Present_orig && COverlayContext_IsCandidateDirectFlipCompatbile_orig &&
-                    COverlayContext_OverlaysEnabled_orig)
-                {
-                    break;
+                        COverlayContext_IsCandidateDirectFlipCompatbile_t*)(address - 0xa);
                 }
             }
-        }
-        else
-        {
-            for (size_t i = 0; i <= imageSize - sizeof(COverlayContext_Present_bytes); i++)
+            else if (!COverlayContext_OverlaysEnabled_orig && !memcmp(
+                address, COverlayContext_OverlaysEnabled_bytes, sizeof(COverlayContext_OverlaysEnabled_bytes)))
             {
-                unsigned char* address = (unsigned char*)dwmcore + i;
-                if (!COverlayContext_Present_orig && !memcmp(address, COverlayContext_Present_bytes,
-                    sizeof(COverlayContext_Present_bytes)))
-                {
-                    COverlayContext_Present_orig = (COverlayContext_Present_t*)address;
-                    COverlayContext_Present_real_orig = COverlayContext_Present_orig;
-                }
-                else if (!COverlayContext_IsCandidateDirectFlipCompatbile_orig && !memcmp(
-                    address, COverlayContext_IsCandidateDirectFlipCompatbile_bytes,
-                    sizeof(COverlayContext_IsCandidateDirectFlipCompatbile_bytes)))
-                {
-                    static int found = 0;
-                    found++;
-                    if (found == 2)
-                    {
-                        COverlayContext_IsCandidateDirectFlipCompatbile_orig = (
-                            COverlayContext_IsCandidateDirectFlipCompatbile_t*)(address - 0xa);
-                    }
-                }
-                else if (!COverlayContext_OverlaysEnabled_orig && !memcmp(
-                    address, COverlayContext_OverlaysEnabled_bytes, sizeof(COverlayContext_OverlaysEnabled_bytes)))
-                {
-                    COverlayContext_OverlaysEnabled_orig = (COverlayContext_OverlaysEnabled_t*)(address - 0x7);
-                }
-                if (COverlayContext_Present_orig && COverlayContext_IsCandidateDirectFlipCompatbile_orig &&
-                    COverlayContext_OverlaysEnabled_orig)
-                {
-                    break;
-                }
+                COverlayContext_OverlaysEnabled_orig = (COverlayContext_OverlaysEnabled_t*)(address - 0x7);
+            }
+            if (COverlayContext_Present_orig && COverlayContext_IsCandidateDirectFlipCompatbile_orig &&
+                COverlayContext_OverlaysEnabled_orig)
+            {
+                break;
             }
         }
 

@@ -1,4 +1,4 @@
-﻿namespace DwmLutGUI
+namespace DwmLutGUI
 {
     public partial class OverlayWindow
     {

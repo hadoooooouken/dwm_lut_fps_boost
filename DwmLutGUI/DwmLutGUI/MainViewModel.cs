@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -12,7 +12,7 @@ using System.Xml.Linq;
 
 namespace DwmLutGUI
 {
-    internal class MainViewModel : INotifyPropertyChanged
+    public class MainViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -48,7 +48,6 @@ namespace DwmLutGUI
         private void MonitorDataOnStaticPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             OnPropertyChanged(nameof(SdrLutPath));
-            OnPropertyChanged(nameof(HdrLutPath));
             SaveConfig();
         }
 
@@ -71,7 +70,6 @@ namespace DwmLutGUI
                 _selectedMonitor = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(SdrLutPath));
-                OnPropertyChanged(nameof(HdrLutPath));
             }
             get => _selectedMonitor;
         }
@@ -91,7 +89,6 @@ namespace DwmLutGUI
                 _allMonitors.Select(x =>
                     new XElement("monitor", new XAttribute("path", x.DevicePath),
                         x.SdrLutPath != null ? new XAttribute("sdr_lut", x.SdrLutPath) : null,
-                        x.HdrLutPath != null ? new XAttribute("hdr_lut", x.HdrLutPath) : null,
                         x.SdrLuts != null ? new XElement("sdr_luts", x.SdrLuts.Select(s => new XElement("sdr_lut", s))) : null)));
 
             xElem.Save(_configPath);
@@ -112,19 +109,6 @@ namespace DwmLutGUI
                 SaveConfig();
             }
             get => SelectedMonitor?.SdrLutPath;
-        }
-
-        public string HdrLutPath
-        {
-            set
-            {
-                if (SelectedMonitor == null || SelectedMonitor.HdrLutPath == value) return;
-                SelectedMonitor.HdrLutPath = value;
-                OnPropertyChanged();
-
-                SaveConfig();
-            }
-            get => SelectedMonitor?.HdrLutPath;
         }
 
         public Key ToggleKey
@@ -200,7 +184,6 @@ namespace DwmLutGUI
                 var position = path.Position.X + "," + path.Position.Y;
 
                 string sdrLutPath = null;
-                string hdrLutPath = null;
 
                 var settings = config?.FirstOrDefault(x => (uint?)x.Attribute("id") == deviceId) ??
                                config?.FirstOrDefault(x => (string)x.Attribute("path") == devicePath);
@@ -208,14 +191,11 @@ namespace DwmLutGUI
                 if (settings != null)
                 {
                     sdrLutPath = (string)settings.Attribute("sdr_lut");
-                    hdrLutPath = (string)settings.Attribute("hdr_lut");
                 }
                 var sdrLutPaths = settings?.Element("sdr_luts")?.Elements("sdr_lut").Select(x => (string)x).ToList();
-                var hdrLutPaths = settings?.Element("hdr_luts")?.Elements("hdr_lut").Select(x => (string)x).ToList();
                 var monitor = new MonitorData(devicePath, path.DisplaySource.SourceId + 1, name, connector, position,
-                    sdrLutPath, hdrLutPath);
+                    sdrLutPath);
                 if (sdrLutPaths != null) monitor.SdrLuts = new ObservableCollection<string>(sdrLutPaths);
-                if (hdrLutPaths != null) monitor.HdrLuts = new ObservableCollection<string>(hdrLutPaths);
                 _allMonitors.Add(monitor);
                 Monitors.Add(monitor);
             }
@@ -228,13 +208,10 @@ namespace DwmLutGUI
                     if (path == null || Monitors.Any(x => x.DevicePath == path)) continue;
 
                     var sdrLutPath = (string)monitor.Attribute("sdr_lut");
-                    var hdrLutPath = (string)monitor.Attribute("hdr_lut");
 
                     var sdrLutPaths = monitor.Element("sdr_luts")?.Elements("sdr_lut").Select(x => (string)x).ToList();
-                    var hdrLutPaths = monitor.Element("hdr_luts")?.Elements("hdr_lut").Select(x => (string)x).ToList();
-                    var newMonitorData = new MonitorData(path, sdrLutPath, hdrLutPath);
+                    var newMonitorData = new MonitorData(path, sdrLutPath);
                     if (sdrLutPaths != null) newMonitorData.SdrLuts = new ObservableCollection<string>(sdrLutPaths);
-                    if (hdrLutPaths != null) newMonitorData.HdrLuts = new ObservableCollection<string>(hdrLutPaths);
                     _allMonitors.Add(newMonitorData);
                 }
             }
@@ -252,7 +229,7 @@ namespace DwmLutGUI
         {
             Injector.Uninject();
             if (!Monitors.All(monitor =>
-                    string.IsNullOrEmpty(monitor.SdrLutPath) && string.IsNullOrEmpty(monitor.HdrLutPath)))
+                    string.IsNullOrEmpty(monitor.SdrLutPath)))
             {
                 Injector.Inject(Monitors);
             }
