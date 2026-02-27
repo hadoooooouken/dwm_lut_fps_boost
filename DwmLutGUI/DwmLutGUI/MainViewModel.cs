@@ -35,7 +35,7 @@ namespace DwmLutGUI
             dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
             dispatcherTimer.Start();
 
-            _configPath = AppDomain.CurrentDomain.BaseDirectory + "config.xml";
+            _configPath = AppContext.BaseDirectory + "config.xml";
 
             _allMonitors = new List<MonitorData>();
             Monitors = new ObservableCollection<MonitorData>();

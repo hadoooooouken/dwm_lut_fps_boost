@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>16.0</VCProjectVersion>
+    <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{21ab1aa2-3f0a-4292-a14a-90fdf167c823}</ProjectGuid>
     <RootNamespace>lutdwm</RootNamespace>

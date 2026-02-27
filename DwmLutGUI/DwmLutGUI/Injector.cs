@@ -151,7 +151,7 @@ namespace DwmLutGUI
         {
             ElevatePrivilege();
             
-            File.Copy(AppDomain.CurrentDomain.BaseDirectory + DllName, DllPath, true);
+            File.Copy(AppContext.BaseDirectory + DllName, DllPath, true);
             ClearPermissions(DllPath);
 
             if (Directory.Exists(LutsPath))

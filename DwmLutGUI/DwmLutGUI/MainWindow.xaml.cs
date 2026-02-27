@@ -11,8 +11,6 @@ using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Input;
 using Microsoft.Win32;
-using ContextMenu = System.Windows.Forms.ContextMenu;
-using MenuItem = System.Windows.Forms.MenuItem;
 using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace DwmLutGUI
@@ -22,10 +20,10 @@ namespace DwmLutGUI
         private readonly MainViewModel _viewModel;
         private bool _applyOnCooldown;
 
-        private readonly MenuItem _statusItem;
-        private readonly MenuItem _applyItem;
-        private readonly MenuItem _disableItem;
-        private readonly MenuItem _disableAndExitItem;
+        private readonly ToolStripMenuItem _statusItem;
+        private readonly ToolStripMenuItem _applyItem;
+        private readonly ToolStripMenuItem _disableItem;
+        private readonly ToolStripMenuItem _disableAndExitItem;
 
         public MainWindow()
         {
@@ -74,28 +72,28 @@ namespace DwmLutGUI
                     WindowState = WindowState.Normal;
                 };
 
-            var contextMenu = new ContextMenu();
+            var contextMenu = new ContextMenuStrip();
 
-            _statusItem = new MenuItem();
-            contextMenu.MenuItems.Add(_statusItem);
+            _statusItem = new ToolStripMenuItem();
+            contextMenu.Items.Add(_statusItem);
             _statusItem.Enabled = false;
 
-            contextMenu.MenuItems.Add("-");
+            contextMenu.Items.Add(new ToolStripSeparator());
 
-            _applyItem = new MenuItem();
-            contextMenu.MenuItems.Add(_applyItem);
+            _applyItem = new ToolStripMenuItem();
+            contextMenu.Items.Add(_applyItem);
             _applyItem.Text = "Apply";
             _applyItem.Click += delegate { Apply_Click(null, null); };
 
-            _disableItem = new MenuItem();
-            contextMenu.MenuItems.Add(_disableItem);
+            _disableItem = new ToolStripMenuItem();
+            contextMenu.Items.Add(_disableItem);
             _disableItem.Text = "Disable";
             _disableItem.Click += delegate { Disable_Click(null, null); };
 
-            contextMenu.MenuItems.Add("-");
+            contextMenu.Items.Add(new ToolStripSeparator());
 
-            _disableAndExitItem = new MenuItem();
-            contextMenu.MenuItems.Add(_disableAndExitItem);
+            _disableAndExitItem = new ToolStripMenuItem();
+            contextMenu.Items.Add(_disableAndExitItem);
             _disableAndExitItem.Text = "Disable and exit";
             _disableAndExitItem.Click += delegate
             {
@@ -103,14 +101,14 @@ namespace DwmLutGUI
                 Close();
             };
 
-            var exitItem = new MenuItem();
-            contextMenu.MenuItems.Add(exitItem);
+            var exitItem = new ToolStripMenuItem();
+            contextMenu.Items.Add(exitItem);
             exitItem.Text = "Exit";
             exitItem.Click += delegate { Close(); };
 
-            contextMenu.Popup += delegate { UpdateContextMenu(); };
+            contextMenu.Opening += delegate { UpdateContextMenu(); };
 
-            notifyIcon.ContextMenu = contextMenu;
+            notifyIcon.ContextMenuStrip = contextMenu;
 
             notifyIcon.Text = Assembly.GetEntryAssembly().GetName().Name;
 
